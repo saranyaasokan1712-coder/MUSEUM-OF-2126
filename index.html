@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Museum of 2126 - Temporal Archival Scanner & Fest Stall Simulator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@500;600;700;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            orbitron: ['Orbitron', 'sans-serif'],
+            mono: ['"Share Tech Mono"', 'monospace'],
+          },
+          colors: {
+            voidDark: '#030712',
+            holoCyan: '#00f0ff',
+            holoPurple: '#b026ff',
+            holoPink: '#ff007f',
+            holoAmber: '#ffaa00',
+            holoGreen: '#10b981',
+            glassDark: 'rgba(7, 14, 33, 0.82)',
+            glassBorder: 'rgba(0, 240, 255, 0.25)'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #030712; color: #f1f5f9; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+    .font-orbitron { font-family: 'Orbitron', sans-serif; }
+    .font-mono { font-family: 'Share Tech Mono', monospace; }
+    .bg-grid-cyber {
+      background-image: 
+        linear-gradient(to right, rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(176, 38, 255, 0.05) 1px, transparent 1px);
+      background-size: 38px 38px;
+    }
+    .crt-scanlines {
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 240, 255, 0.03) 50%, rgba(0, 240, 255, 0.03));
+      background-size: 100% 4px; pointer-events: none;
+    }
+    .holo-panel {
+      background: rgba(8, 16, 38, 0.85); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(0, 240, 255, 0.22);
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.9), inset 0 0 15px rgba(0, 240, 255, 0.03);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .holo-panel:hover {
+      border-color: rgba(0, 240, 255, 0.6); box-shadow: 0 0 25px rgba(0, 240, 255, 0.2), inset 0 0 20px rgba(0, 240, 255, 0.08); transform: translateY(-2px);
+    }
+    .holo-panel-active { border-color: #00f0ff !important; box-shadow: 0 0 30px rgba(0, 240, 255, 0.35), inset 0 0 20px rgba(0, 240, 255, 0.15) !important; }
+    @keyframes laserSweepAnim { 0% { top: 0%; opacity: 0.2; } 50% { opacity: 1; } 100% { top: 100%; opacity: 0.2; } }
+    .laser-beam {
+      position: absolute; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, #00f0ff, #b026ff, transparent);
+      box-shadow: 0 0 12px #00f0ff, 0 0 25px #b026ff;
+      animation: laserSweepAnim 2.2s ease-in-out infinite alternate;
+    }
+    .glow-cyan { text-shadow: 0 0 12px rgba(0, 240, 255, 0.7), 0 0 24px rgba(0, 240, 255, 0.3); }
+    .glow-purple { text-shadow: 0 0 12px rgba(176, 38, 255, 0.7), 0 0 24px rgba(176, 38, 255, 0.3); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #030712; }
+    ::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.3); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0, 240, 255, 0.7); }
+  </style>
+</head>
+<body class="min-h-screen bg-grid-cyber relative selection:bg-holoCyan selection:text-black">
+  <div class="fixed inset-0 crt-scanlines z-40 pointer-events-none"></div>
+  <canvas id="ambientStarfield" class="fixed inset-0 z-0 pointer-events-none opacity-40"></canvas>
+
+  <header class="sticky top-0 z-30 border-b border-cyan-500/20 bg-voidDark/90 backdrop-blur-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <div class="flex items-center space-x-3.5">
+        <div class="relative w-12 h-12 rounded-2xl bg-gradient-to-tr from-holoPurple via-holoCyan to-sky-400 p-[1.5px] flex items-center justify-center shadow-[0_0_15px_rgba(0,240,255,0.35)]">
+          <div class="w-full h-full bg-voidDark rounded-2xl flex items-center justify-center text-2xl">🏛️</div>
+          <span class="absolute -bottom-1 -right-1 flex h-3.5 w-3.5">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-holoCyan opacity-80"></span>
+            <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-holoCyan"></span>
+          </span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-orbitron font-extrabold text-xl sm:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-white via-holoCyan to-holoPurple">
+              MUSEUM OF 2126
+            </h1>
+            <span class="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950/80 border border-cyan-400/40 text-holoCyan font-bold tracking-widest">
+              TEMPORAL CHRONO-NODE
+            </span>
+          </div>
+          <p class="font-mono text-[11px] text-gray-400 uppercase tracking-wider flex items-center gap-2">
+            <span class="text-holoCyan">● RECONSTRUCTING EARTH 2026</span>
+            <span class="text-gray-600">|</span>
+            <span class="text-holoPurple">NANO BANANA GENERATOR ENABLED</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <button id="soundBtn" onclick="toggleSoundSynth()" class="px-3 py-2 rounded-xl bg-slate-900/80 border border-cyan-500/30 hover:border-holoCyan text-xs font-mono text-cyan-300 flex items-center gap-1.5 transition-all shadow-sm">
+          <span id="soundIcon">🔊</span>
+          <span id="soundLabel" class="hidden md:inline">AUDIO: ON</span>
+        </button>
+        <button onclick="toggleModal('apiModal', true)" class="px-3 py-2 rounded-xl bg-slate-900/80 border border-purple-500/40 hover:border-holoPurple text-xs font-mono text-purple-300 flex items-center gap-1.5 transition-all shadow-sm">
+          <span>🔑</span>
+          <span class="hidden sm:inline" id="keyBadgeText">API KEY</span>
+        </button>
+        <button onclick="switchActiveTab('festSimulatorTab')" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-holoPurple/30 to-cyan-500/20 hover:from-holoPurple/50 hover:to-cyan-500/40 border border-holoPurple/50 text-xs font-mono text-purple-200 flex items-center gap-2 transition-all shadow-lg shadow-purple-950/40">
+          <span>🎪</span>
+          <span class="font-bold">FEST STALL MODE</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 relative z-10">
+    <div class="relative rounded-3xl p-6 sm:p-10 border border-cyan-500/30 bg-gradient-to-br from-cyan-950/30 via-voidDark to-purple-950/30 overflow-hidden shadow-2xl">
+      <div class="absolute -top-24 -right-24 w-96 h-96 bg-holoCyan/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-holoPurple/15 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="relative z-10 max-w-4xl space-y-4">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-400/40 text-holoCyan font-mono text-xs tracking-wider">
+          <span class="w-2 h-2 rounded-full bg-holoCyan animate-ping"></span>
+          GOOGLE STUDENT AMBASSADOR • BUILD YOUR FEST STALL
+        </div>
+
+        <h2 class="font-orbitron text-2xl sm:text-4xl md:text-5xl font-black text-white leading-tight">
+          ARCHIVE 2026. <br class="hidden sm:inline">
+          <span class="text-transparent bg-clip-text bg-gradient-to-r from-holoCyan via-sky-300 to-holoPurple glow-cyan">
+            VISUALIZE WITH NANO BANANA.
+          </span>
+        </h2>
+
+        <p class="text-slate-300 text-sm sm:text-base leading-relaxed max-w-3xl">
+          Pick any ordinary 2026 campus artifact. The Temporal Scanner reconstructs its absurd 2126 archeological interpretation, connects to <strong>Gemini 3.1 Flash Image (Nano Banana)</strong> to render ultra-realistic holographic museum art on-the-fly, and outputs a complete festival booth pitch ready to deliver in 60 seconds!
+        </p>
+
+        <div class="pt-2 flex flex-wrap items-center gap-3">
+          <div class="relative flex-1 min-w-[240px] max-w-md">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-cyan-400 font-mono text-xs">CURATOR://</span>
+            <input type="text" id="curatorHandle" value="Cadet Explorer" placeholder="Enter your student name..." class="w-full bg-black/60 border border-cyan-500/30 rounded-xl pl-24 pr-4 py-2 text-sm text-white font-mono focus:outline-none focus:border-holoCyan focus:ring-1 focus:ring-holoCyan transition-all placeholder:text-gray-600"/>
+          </div>
+          <div class="font-mono text-xs text-emerald-400 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Nano Banana Direct Generation Armed
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center border-b border-gray-800 space-x-2 sm:space-x-4">
+      <button onclick="switchActiveTab('scannerTab')" id="tabNav-scannerTab" class="pb-3 px-3 sm:px-5 font-orbitron text-xs sm:text-sm font-bold border-b-2 border-holoCyan text-holoCyan transition-all flex items-center gap-2">
+        <span>🔬</span> 01. TEMPORAL ARTIFACT SCANNER
+      </button>
+      <button onclick="switchActiveTab('festSimulatorTab')" id="tabNav-festSimulatorTab" class="pb-3 px-3 sm:px-5 font-orbitron text-xs sm:text-sm font-bold border-b-2 border-transparent text-gray-400 hover:text-white transition-all flex items-center gap-2">
+        <span>🎪</span> 02. FEST STALL SIMULATOR (BRAND & 60s PITCH)
+      </button>
+    </div>
+
+    <div id="scannerTab" class="space-y-8">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h3 class="font-orbitron text-xl sm:text-2xl font-bold text-white tracking-wide flex items-center gap-2">
+            <span class="text-holoCyan">◆</span> SELECT EARTH SPECIMEN (2026)
+          </h3>
+          <p class="font-mono text-xs text-gray-400">Choose from 16 curated artifacts to initiate temporal deconstruction</p>
+        </div>
+        <div class="flex flex-wrap gap-2" id="filterContainer">
+          <button onclick="filterArtifacts('all')" class="cat-chip active-chip px-3.5 py-1.5 rounded-lg text-xs font-mono transition-all bg-holoCyan/20 text-holoCyan border border-holoCyan/50 font-bold">ALL (16)</button>
+          <button onclick="filterArtifacts('tech')" class="cat-chip px-3.5 py-1.5 rounded-lg text-xs font-mono transition-all bg-voidDark text-gray-400 border border-gray-800 hover:text-white">COMPUTING & TECH</button>
+          <button onclick="filterArtifacts('lifestyle')" class="cat-chip px-3.5 py-1.5 rounded-lg text-xs font-mono transition-all bg-voidDark text-gray-400 border border-gray-800 hover:text-white">CAMPUS LIFESTYLE</button>
+          <button onclick="filterArtifacts('audio')" class="cat-chip px-3.5 py-1.5 rounded-lg text-xs font-mono transition-all bg-voidDark text-gray-400 border border-gray-800 hover:text-white">AUDIO & OPTICS</button>
+        </div>
+      </div>
+
+      <div id="artifactGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5"></div>
+
+      <section id="chamberSection" class="scroll-mt-24 pt-4">
+        <div class="border-t border-cyan-500/20 pt-8">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h3 class="font-orbitron text-xl sm:text-2xl font-bold text-white tracking-wide flex items-center gap-2">
+                <span class="text-holoPurple">◆</span> QUANTUM SCAN & NANO BANANA STUDIO
+              </h3>
+              <p class="font-mono text-xs text-gray-400">Generate live photorealistic AI museum renders or interact with 2126 vector holograms</p>
+            </div>
+            <span id="targetBadge" class="hidden font-mono text-xs px-3 py-1 rounded-full bg-cyan-950 text-holoCyan border border-cyan-400/40">TARGET ENGAGED</span>
+          </div>
+
+          <div id="standbyScreen" class="holo-panel rounded-3xl p-10 sm:p-14 text-center border-dashed border-cyan-500/30 flex flex-col items-center justify-center">
+            <div class="w-16 h-16 rounded-2xl bg-cyan-950/60 border border-cyan-400/30 flex items-center justify-center text-3xl mb-4 text-cyan-400 animate-pulse">🛰️</div>
+            <h4 class="font-orbitron text-lg sm:text-xl font-bold text-gray-200">NO SPECIMEN CURRENTLY IN STASIS</h4>
+            <p class="text-xs sm:text-sm font-mono text-gray-400 mt-2 max-w-lg">Select one of the 16 specimens above to activate the quantum laser sweeps, inspect historical telemetry, and generate live Nano Banana visuals.</p>
+          </div>
+
+          <div id="scanningScreen" class="hidden holo-panel rounded-3xl p-8 sm:p-12 text-center relative overflow-hidden border-holoCyan">
+            <div class="laser-beam"></div>
+            <div class="max-w-md mx-auto space-y-6">
+              <div class="relative w-24 h-24 mx-auto flex items-center justify-center">
+                <div class="absolute inset-0 rounded-2xl border-2 border-holoCyan/40 animate-ping"></div>
+                <div id="scanIconSlot" class="relative w-20 h-20 rounded-2xl bg-black/80 border border-holoCyan flex items-center justify-center text-4xl shadow-[0_0_30px_rgba(0,240,255,0.4)]">📱</div>
+              </div>
+              <div>
+                <h4 id="scanTargetTitle" class="font-orbitron font-extrabold text-lg text-holoCyan tracking-widest uppercase">ANALYZING SPECIMEN...</h4>
+                <p id="scanTelemetryText" class="font-mono text-xs text-gray-400 mt-1">Reconstructing carbon polymer lattice...</p>
+              </div>
+              <div class="w-full bg-slate-950 rounded-full h-3 border border-cyan-500/30 p-0.5 overflow-hidden">
+                <div id="scanProgressFill" class="h-full bg-gradient-to-r from-holoCyan via-sky-400 to-holoPurple rounded-full transition-all duration-300 w-1/12"></div>
+              </div>
+              <div class="bg-black/80 border border-cyan-500/20 rounded-xl p-3.5 text-left font-mono text-xs text-cyan-400 space-y-1 h-24 overflow-hidden">
+                <div id="scanLog1">> Quantum chronometer calibrated to 2026.09.22...</div>
+                <div id="scanLog2" class="text-gray-500">> Isolating ancient biological human traces...</div>
+                <div id="scanLog3" class="text-gray-500">> Contacting Nano Banana Generative Engine...</div>
+              </div>
+            </div>
+          </div>
+
+          <div id="activeDossierSlot" class="hidden space-y-6"></div>
+        </div>
+      </section>
+    </div>
+
+    <div id="festSimulatorTab" class="hidden space-y-8">
+      <div class="rounded-3xl p-6 sm:p-10 border border-holoPurple/40 bg-gradient-to-br from-purple-950/30 via-voidDark to-slate-900 shadow-2xl relative overflow-hidden">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-purple-500/20">
+          <div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-950/80 border border-purple-400/40 text-purple-300 font-mono text-xs tracking-wider mb-2">
+              <span>🎪</span> GOOGLE STUDENT AMBASSADOR PRODUCT TRIAL
+            </div>
+            <h3 class="font-orbitron text-2xl sm:text-3xl font-extrabold text-white">BUILD YOUR FEST STALL: BRAND & 60-SECOND PITCH</h3>
+            <p class="font-mono text-xs text-gray-400 mt-1">"Brand it with Gemini. Bring it to life with Nano Banana. Pitch it in 60 seconds."</p>
+          </div>
+          <div class="flex items-center gap-4 bg-black/70 border border-purple-500/30 rounded-2xl p-4">
+            <div class="text-center">
+              <div class="font-mono text-[10px] text-purple-400 uppercase tracking-widest">PITCH COUNTDOWN</div>
+              <div id="pitchTimerText" class="font-orbitron font-black text-3xl text-holoCyan glow-cyan">01:00</div>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <button id="pitchTimerBtn" onclick="toggleTimer()" class="px-4 py-1.5 rounded-lg bg-holoCyan text-black font-mono text-xs font-bold hover:bg-cyan-300 transition-all">START</button>
+              <button onclick="resetTimer()" class="px-4 py-1 rounded-lg bg-slate-800 text-gray-400 hover:text-white font-mono text-[10px] transition-all">RESET</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+          <div class="holo-panel rounded-2xl p-5 border-cyan-500/20 space-y-2">
+            <div class="font-mono text-xs text-holoCyan font-bold flex items-center gap-2"><span>01</span> BRAND IDENTITY (GEMINI)</div>
+            <h4 class="font-orbitron font-bold text-white text-base">"Museum of 2126"</h4>
+            <p class="text-xs text-gray-300 leading-relaxed"><strong>Tagline:</strong> <em>"Get Archived Before You Get Obsolete."</em><br><strong>UVP:</strong> An interactive time-travel booth where student tech is satirically deconstructed as 100-year-old sacred relics.</p>
+          </div>
+          <div class="holo-panel rounded-2xl p-5 border-holoPurple/20 space-y-2">
+            <div class="font-mono text-xs text-purple-400 font-bold flex items-center gap-2"><span>02</span> NANO BANANA ENGINE</div>
+            <h4 class="font-orbitron font-bold text-white text-base">Holographic Pod Mockups</h4>
+            <p class="text-xs text-gray-300 leading-relaxed">Produces photorealistic 8K neon stall banners, levitating artifact capsules, and laser vitrines on-demand using Google's Nano Banana image engine.</p>
+          </div>
+          <div class="holo-panel rounded-2xl p-5 border-holoPink/20 space-y-2">
+            <div class="font-mono text-xs text-holoPink font-bold flex items-center gap-2"><span>03</span> FEST MONETIZATION & VALUE</div>
+            <h4 class="font-orbitron font-bold text-white text-base">Viral Experience & Merch</h4>
+            <p class="text-xs text-gray-300 leading-relaxed"><strong>Experience:</strong> Free 30-sec temporal scan.<br><strong>Merch:</strong> ₹99 - ₹149 for high-gloss collectible 2126 Holographic Archival Cards and custom AI sticker badges.</p>
+          </div>
+        </div>
+
+        <div class="mt-8 bg-black/80 border border-purple-500/30 rounded-2xl p-5 sm:p-6 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="font-mono text-xs text-purple-300 font-bold flex items-center gap-2"><span>🎤</span> 60-SECOND PITCH TELEPROMPTER (READ ALOUD DURING TIMER)</div>
+            <button onclick="copyMasterPitchScript()" class="px-3.5 py-1.5 rounded-lg bg-holoPurple/20 hover:bg-holoPurple/40 text-purple-200 border border-purple-400/40 text-xs font-mono transition-all flex items-center gap-1.5 self-start sm:self-auto"><span>📋</span> COPY MASTER PITCH</button>
+          </div>
+          <div id="masterPitchBox" class="text-xs sm:text-sm text-gray-200 leading-relaxed font-sans bg-slate-950 p-5 rounded-xl border border-gray-800 whitespace-pre-line border-l-4 border-l-holoCyan">
+"Good morning, judges, ambassadors, and fellow creators!
+
+Walk across any college festival and you see the exact same thing: crowded food stalls, generic sticker tables, and passive photobooths where people take a photo and immediately forget it.
+
+Introducing the **Museum of 2126**—an interactive speculative experience that turns our everyday campus gear into rare, sacred archeological artifacts discovered one century in the future!
+
+At our stall, visitors don't just shop; they step into our live Temporal Scanner. They place their personal item—a smartphone, mechanical keyboard, or hydro flask—and instantly receive a hilarious 2126 archeologist breakdown and an ultra-photorealistic holographic exhibit card rendered live by **Google Gemini** and **Nano Banana**!
+
+We don't just sell a product; we create curiosity, viral social media shares, and an unforgettable story in under 60 seconds. 
+
+Step into our stall, get archived today, and discover how the future remembers you! Thank you!"
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="apiModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-voidDark border border-holoCyan/60 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative space-y-4">
+      <div class="flex items-center justify-between border-b border-cyan-500/20 pb-3">
+        <h4 class="font-orbitron font-bold text-lg text-white flex items-center gap-2"><span>🔑</span> GEMINI / NANO BANANA CONFIG</h4>
+        <button onclick="toggleModal('apiModal', false)" class="text-gray-400 hover:text-white font-mono text-lg">&times;</button>
+      </div>
+      <p class="text-xs text-gray-300 font-sans leading-relaxed">
+        Nano Banana image generation utilizes the <strong>gemini-3.1-flash-image</strong> endpoint. Enter your Google AI Studio key below:
+      </p>
+      <div class="space-y-2">
+        <label class="font-mono text-xs text-cyan-400">GOOGLE AI STUDIO KEY:</label>
+        <input type="password" id="customApiKeyInput" placeholder="AIzaSy..." class="w-full bg-slate-900 border border-cyan-500/40 rounded-xl px-4 py-2.5 text-xs font-mono text-white focus:outline-none focus:border-holoCyan"/>
+      </div>
+      <div class="p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/30 font-mono text-[11px] text-gray-300">
+        ✨ <em>Leave empty to engage procedural vector holographic previews!</em>
+      </div>
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button onclick="toggleModal('apiModal', false)" class="px-4 py-2 rounded-xl text-xs font-mono text-gray-400 hover:text-white">Cancel</button>
+        <button onclick="saveApiKey()" class="px-4 py-2 rounded-xl bg-holoCyan text-black font-mono text-xs font-bold hover:bg-cyan-300 transition-all">Save Key</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastNotification" class="fixed bottom-6 right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-3 px-5 py-3 rounded-2xl bg-voidDark border border-holoCyan text-white font-mono text-xs shadow-2xl shadow-cyan-500/30">
+    <span class="text-lg text-holoCyan">⚡</span>
+    <span id="toastMsgText">Telemetry saved</span>
+  </div>
+
+  <script>
+    const ARTIFACT_DB = [
+      {
+        id: "art-smartphone", name: "Smartphone Slab", category: "tech", categoryLabel: "Communication Tech", year: "2026", icon: "📱", colorGrad: "from-cyan-500 to-blue-600",
+        interpretation: "The Sacred Black Glass Slab. Ancient humans clutched this rectangular glass totem day and night, rhythmically swiping their thumb upward every four seconds to summon micro-doses of dopamine from an ethereal cloud called 'The Algorithm'.",
+        archeologyNote: "Excessive thumb grease deposits indicate over 14 hours of continuous daily thumb friction.",
+        nanoBananaPrompt: "Photorealistic museum display of an ancient 2026 black glass Smartphone hovering inside a glowing cylindrical glass anti-gravity stasis chamber in year 2126. Vibrant cyan and magenta holographic wireframe diagrams and floating data rings surround the phone. Futuristic museum visitors in cyberpunk apparel admire the exhibit in the softly blurred background. Dramatic museum spotlighting, dust motes, 8k resolution, cinematic.",
+        blueprint: "phone"
+      },
+      {
+        id: "art-laptop", name: "Clamshell Laptop", category: "tech", categoryLabel: "Computing", year: "2026", icon: "💻", colorGrad: "from-cyan-400 to-teal-500",
+        interpretation: "The Lap-Furnace. An aluminum clamshell device whose microscopic cooling turbines roared like jet engines whenever ancient students opened more than 28 browser tabs simultaneously.",
+        archeologyNote: "Chassis is completely covered in fossilized vinyl stickers of extinct programming libraries and meme frogs.",
+        nanoBananaPrompt: "A sleek 2026 thin laptop open inside a futuristic anti-gravity showcase in 2126. A volumetric blue laser hologram rises from the glowing keyboard projecting lines of ancient code. Dark museum aesthetic, raytracing, cinematic 8k.",
+        blueprint: "laptop"
+      },
+      {
+        id: "art-headphones", name: "Noise-Cancelling Cans", category: "audio", categoryLabel: "Acoustic Pods", year: "2026", icon: "🎧", colorGrad: "from-purple-500 to-pink-600",
+        interpretation: "The Acoustic Shielding Dome. Clamped firmly onto human skulls to drown out chaotic campus soundscapes and avoid making awkward eye contact with acquaintances.",
+        archeologyNote: "Synthetic protein leather cushions show heavy temporal wear along the headband seam.",
+        nanoBananaPrompt: "Futuristic museum display of vintage 2026 matte black over-ear headphones floating inside a glowing glass cube. Neon cyan soundwave patterns radiate outward in frozen light rings. Moody museum atmosphere, 8k.",
+        blueprint: "headphones"
+      },
+      {
+        id: "art-glasses", name: "Smart AR Glasses", category: "tech", categoryLabel: "Augmented Reality", year: "2026", icon: "🕶️", colorGrad: "from-violet-500 to-fuchsia-600",
+        interpretation: "The Retinal HUD Prototype. The earliest clumsy human attempt to paste text messages directly in front of their eyeballs before cranial neural implants made physical glass frames obsolete.",
+        archeologyNote: "Accumulator cell drained after 29 minutes of operation, causing ancient wearers intense temple heat.",
+        nanoBananaPrompt: "Futuristic museum display of 2026 smart augmented reality spectacles floating in a magnetic field. Green holographic prism rays project miniature user-interface widgets into midair. Dark cybernetic exhibition room, 8k resolution.",
+        blueprint: "glasses"
+      },
+      {
+        id: "art-backpack", name: "Campus Backpack", category: "lifestyle", categoryLabel: "Physical Cargo", year: "2026", icon: "🎒", colorGrad: "from-indigo-500 to-purple-600",
+        interpretation: "The Manual Hauling Cocoon. Ancient scholars strapped this heavy fabric sack to their vertebrae, manually hauling physical paper scrolls and computation bricks across campus before quantum mass reduction.",
+        archeologyNote: "Pouch pocket contained a preserved library card, an empty mint wrapper, and a bent paperclip.",
+        nanoBananaPrompt: "An antique weathered university backpack hovering inside an anti-gravity illuminated museum pedestal in 2126. Purple laser measurement grids scan the fabric weave. Photorealistic, volumetric lighting, 8k.",
+        blueprint: "backpack"
+      },
+      {
+        id: "art-flask", name: "Insulated Hydro Flask", category: "lifestyle", categoryLabel: "Thermal Cylinder", year: "2026", icon: "🧴", colorGrad: "from-sky-400 to-blue-500",
+        interpretation: "The Lecture Hall Gong. A vacuum-insulated metallic vessel traditionally dropped onto hard lecture hall floors at least twice per class, emitting an earth-shattering acoustic shockwave of 115 decibels.",
+        archeologyNote: "Dented bottom rim confirms severe impact with 2026 tiered classroom concrete.",
+        nanoBananaPrompt: "A vibrant sticker-covered stainless steel water flask displayed like a sacred artifact inside an illuminated glass prism in 2126. Holographic blue thermographic temperature rings pulse around the flask. Hyper-realistic, museum atmosphere, 8k.",
+        blueprint: "flask"
+      },
+      {
+        id: "art-camera", name: "Optical DSLR Camera", category: "audio", categoryLabel: "Photon Trap", year: "2026", icon: "📷", colorGrad: "from-rose-500 to-pink-600",
+        interpretation: "The Mechanical Photon Trap. A heavy black chassis with ground glass lenses swung around the neck like an ornate tribal amulet to signal status as a 'visual storyteller'.",
+        archeologyNote: "Internal memory card reveals 4,200 identical photographs of a campus latte taken from slightly different angles.",
+        nanoBananaPrompt: "A professional 2026 digital camera inside a crystal stasis cube in the Museum of 2126. Neon cyan and warm amber volumetric light rays refract through the optical lens elements. Cyberpunk museum visitors in background, 8k.",
+        blueprint: "camera"
+      },
+      {
+        id: "art-energy", name: "Caffeinated Energy Drink", category: "lifestyle", categoryLabel: "Adrenaline Elixir", year: "2026", icon: "⚡", colorGrad: "from-amber-400 to-emerald-500",
+        interpretation: "The Synthetic Heart-Pumper. Liquid fuel containing 300 milligrams of synthetic caffeine and neon taurine, consumed at 3:00 AM to survive exam cramming sessions.",
+        archeologyNote: "Aluminum can shows intact pull-tab; spectral scan detects residual traces of 'Tropic Thunder Mango'.",
+        nanoBananaPrompt: "An illuminated museum display in 2126 featuring an ancient colorful aluminum energy drink can. Levitating droplets of glowing green liquid hover around the can in a zero-gravity stasis field. Cinematic 8k.",
+        blueprint: "can"
+      },
+      {
+        id: "art-calculator", name: "Scientific Calculator", category: "tech", categoryLabel: "Arithmetic Stone", year: "2026", icon: "🧮", colorGrad: "from-teal-400 to-cyan-600",
+        interpretation: "The Archaic Silicon Oracle. Students carried this battery-powered button pad into high-stakes test chambers to evaluate basic sine angles, secretly typing '80085' for comedic relief.",
+        archeologyNote: "Monochromatic LCD panel still functions; solar cell operates under ultraviolet torch.",
+        nanoBananaPrompt: "A vintage 2026 scientific calculator displayed on a minimalist glowing pedestal in an archival museum in 2126. Holographic neon green mathematical formulas and matrix curves float above it. 8k render.",
+        blueprint: "calculator"
+      },
+      {
+        id: "art-controller", name: "Wireless Gamepad", category: "tech", categoryLabel: "Dopamine Controller", year: "2026", icon: "🎮", colorGrad: "from-purple-600 to-indigo-700",
+        interpretation: "The Adrenaline Reflex Simulator. Ancient earthlings clutched this contoured plastic artifact, frantically pressing synthetic buttons to pilot virtual warriors across simulated battlefields.",
+        archeologyNote: "Right analog joystick exhibits severe mechanical fatigue, known in ancient chronicles as 'stick drift'.",
+        nanoBananaPrompt: "A 2026 wireless gaming controller floating inside a glowing violet forcefield in a museum in 2126. Holographic orange neon callouts point to the triggers and buttons, showing historical player reaction metrics. 8k render.",
+        blueprint: "controller"
+      },
+      {
+        id: "art-cup", name: "Paper Coffee Cup", category: "lifestyle", categoryLabel: "Pulp Vessel", year: "2026", icon: "☕", colorGrad: "from-amber-600 to-rose-600",
+        interpretation: "The Disposable Lifeblood Chalice. Single-use cardboard cup decorated with a mispronounced ancient name scrawled in black ink by a ceremonial barista.",
+        archeologyNote: "Cardboard sleeve reads 'Saran' with question mark. Faint traces of oat milk preserved in the pulp base.",
+        nanoBananaPrompt: "An ancient takeaway paper coffee cup with a plastic lid floating in an airtight glass exhibit cylinder in the Museum of 2126. Soft amber museum lighting, dust particles, cybernetic museum backdrop, 8k resolution.",
+        blueprint: "cup"
+      },
+      {
+        id: "art-sneakers", name: "Chunky Campus Sneakers", category: "lifestyle", categoryLabel: "Polymer Footwear", year: "2026", icon: "👟", colorGrad: "from-emerald-500 to-teal-700",
+        interpretation: "The Air-Cushioned Foot Chariots. Oversized synthetic rubber soles engineered to survive 15,000 steps of campus walking between distant department wings.",
+        archeologyNote: "Outsole treads show embedded campus gravel and microscopic synthetic turf pellets.",
+        nanoBananaPrompt: "A pair of iconic 2026 designer sneakers floating horizontally in a zero-gravity stasis vitrine in 2126. Laser grid lines trace the ergonomic curvature of the rubber soles in neon cyan. Hyper-detailed, 8k.",
+        blueprint: "sneakers"
+      },
+      {
+        id: "art-textbook", name: "Organic Paper Textbook", category: "lifestyle", categoryLabel: "Pulp Tome", year: "2026", icon: "📚", colorGrad: "from-amber-500 to-red-600",
+        interpretation: "The Compressed Plant Pulp Tome. Ancient humans destroyed thousands of leafy photosynthetic organisms to print heavy stacks of equations that became outdated before the semester concluded.",
+        archeologyNote: "Acquired for 250 currency units; pages 1 to 12 show mild human usage, pages 13 to 850 completely untouched.",
+        nanoBananaPrompt: "A thick university calculus textbook from 2026 hovering open on a magnetic exhibition pedestal in 2126. A golden laser beam scans the paper pages, projecting glowing mathematical symbols into the air. Volumetric lighting, 8k.",
+        blueprint: "book"
+      },
+      {
+        id: "art-scooter", name: "Electric Kick Scooter", category: "lifestyle", categoryLabel: "Micro-Mobility", year: "2026", icon: "🛴", colorGrad: "from-emerald-400 to-cyan-500",
+        interpretation: "The Sidewalk Peril Steed. A battery-powered metal pipe with two miniature rubber wheels that students piloted at reckless speeds through crowded pedestrian walkways.",
+        archeologyNote: "Recovered from the bottom of an ancient campus ornamental pond where exhausted riders ritually abandoned them.",
+        nanoBananaPrompt: "A sleek 2026 electric kick scooter mounted in midair by magnetic brackets in a 2126 transportation museum. Neon cyan light ribbons trace its velocity aerodynamics on the floor. Photorealistic, 8k resolution.",
+        blueprint: "scooter"
+      },
+      {
+        id: "art-card", name: "Polyvinyl Credit Card", category: "lifestyle", categoryLabel: "Debt Token", year: "2026", icon: "💳", colorGrad: "from-amber-400 to-orange-500",
+        interpretation: "The Contactless Debt Token. Before retinal transaction nodes, humans tapped this flimsy plastic card against sensor pads to purchase instant noodles and sugary bubble tea.",
+        archeologyNote: "Gold contact chip intact; tiny NFC copper antenna coils verified inside the plastic laminate.",
+        nanoBananaPrompt: "A glossy bank card from 2026 hovering in a laser field inside a futuristic financial history museum in 2126. Cyan holographic wireframe numbers and currency symbols orbit the card. Dark obsidian styling, 8k.",
+        blueprint: "card"
+      },
+      {
+        id: "art-smartwatch", name: "Biometric Smartwatch", category: "tech", categoryLabel: "Wrist Node", year: "2026", icon: "⌚", colorGrad: "from-teal-500 to-blue-600",
+        interpretation: "The Wrist Taskmaster. A glass button strapped to the arm that electro-vibrated to order ancient humans to stand up, breathe, and walk 10,000 arbitrary paces before sunset.",
+        archeologyNote: "Optical green LED array on bottom still flickers weakly when subjected to inductive charging.",
+        nanoBananaPrompt: "A 2026 biometric smartwatch with a silicone strap displayed in an ultra-modern 2126 gallery. Holographic rings display ancient heart-rate curves and step counters in neon green and cyan. Hyper-detailed, 8k.",
+        blueprint: "smartwatch"
+      }
+    ];
+
+    let currentSelectedArtifact = null;
+    let currentFilter = 'all';
+    let audioContext = null;
+    let isSoundOn = true;
+    let storedApiKey = "";
+
+    function initAudioEngine() {
+      if (!audioContext) {
+        const AudioClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioClass) audioContext = new AudioClass();
+      }
+      if (audioContext && audioContext.state === 'suspended') audioContext.resume();
+    }
+
+    function playTone(freq, type = 'sine', duration = 0.15, gainVal = 0.08) {
+      if (!isSoundOn) return;
+      try {
+        initAudioEngine();
+        if (!audioContext) return;
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+        gain.gain.setValueAtTime(gainVal, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.start();
+        osc.stop(audioContext.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playTachyonScanHum() {
+      if (!isSoundOn) return;
+      try {
+        initAudioEngine();
+        if (!audioContext) return;
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(140, audioContext.currentTime);
+        osc.frequency.linearRampToValueAtTime(520, audioContext.currentTime + 1.2);
+        gain.gain.setValueAtTime(0.04, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1.2);
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.start();
+        osc.stop(audioContext.currentTime + 1.2);
+      } catch (e) {}
+    }
+
+    function playChimeSuccess() {
+      if (!isSoundOn) return;
+      playTone(523.25, 'triangle', 0.12, 0.08);
+      setTimeout(() => playTone(659.25, 'triangle', 0.15, 0.08), 90);
+      setTimeout(() => playTone(783.99, 'sine', 0.35, 0.1), 180);
+      setTimeout(() => playTone(1046.50, 'sine', 0.45, 0.12), 270);
+    }
+
+    function toggleSoundSynth() {
+      isSoundOn = !isSoundOn;
+      const icon = document.getElementById('soundIcon');
+      const label = document.getElementById('soundLabel');
+      if (isSoundOn) {
+        icon.innerText = '🔊';
+        label.innerText = 'AUDIO: ON';
+        showToast('Web Audio Synthesizer: Armed');
+        playTone(600, 'sine', 0.1, 0.1);
+      } else {
+        icon.innerText = '🔇';
+        label.innerText = 'AUDIO: OFF';
+        showToast('Web Audio Synthesizer: Muted');
+      }
+    }
+
+    function renderGrid() {
+      const grid = document.getElementById('artifactGrid');
+      grid.innerHTML = '';
+      const items = ARTIFACT_DB.filter(art => currentFilter === 'all' || art.category === currentFilter);
+
+      items.forEach((item, index) => {
+        const isSelected = currentSelectedArtifact && currentSelectedArtifact.id === item.id;
+        const card = document.createElement('div');
+        card.className = `group relative rounded-2xl p-4 sm:p-5 cursor-pointer transition-all duration-300 holo-panel ${isSelected ? 'holo-panel-active bg-cyan-950/60 -translate-y-1' : 'hover:bg-slate-900/80'}`;
+        card.onclick = () => runScanSequence(item.id);
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-mono text-[10px] text-gray-500 uppercase tracking-widest">RELIC #${(index + 1).toString().padStart(2, '0')}</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-500/30">c.${item.year}</span>
+          </div>
+          <div class="relative w-14 h-14 mx-auto my-2.5 flex items-center justify-center">
+            <div class="absolute inset-0 rounded-xl bg-gradient-to-tr ${item.colorGrad} opacity-25 blur-md group-hover:opacity-50 transition-opacity"></div>
+            <div class="relative w-12 h-12 rounded-xl bg-black/70 border border-cyan-500/25 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">${item.icon}</div>
+          </div>
+          <div class="text-center mt-2">
+            <h4 class="font-orbitron font-bold text-sm text-white group-hover:text-holoCyan transition-colors truncate">${item.name}</h4>
+            <p class="font-mono text-[11px] text-gray-400 mt-0.5 truncate">${item.categoryLabel}</p>
+          </div>
+          <div class="mt-4">
+            <button class="w-full py-1.5 px-3 rounded-xl text-xs font-mono font-bold transition-all flex items-center justify-center gap-1.5 ${isSelected ? 'bg-holoCyan text-black shadow-lg shadow-cyan-500/40' : 'bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 group-hover:border-holoCyan group-hover:bg-cyan-500/20'}">
+              <span>${isSelected ? 'LOCKED ON' : 'ACTIVATE SCAN'}</span>
+              <span>${isSelected ? '✓' : '→'}</span>
+            </button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function filterArtifacts(cat) {
+      currentFilter = cat;
+      playTone(480, 'sine', 0.08, 0.05);
+      document.querySelectorAll('.cat-chip').forEach(btn => {
+        btn.classList.remove('bg-holoCyan/20', 'text-holoCyan', 'border-holoCyan/50', 'font-bold');
+        btn.classList.add('bg-voidDark', 'text-gray-400', 'border-gray-800');
+      });
+      const clickedBtn = event.currentTarget;
+      clickedBtn.classList.remove('bg-voidDark', 'text-gray-400', 'border-gray-800');
+      clickedBtn.classList.add('bg-holoCyan/20', 'text-holoCyan', 'border-holoCyan/50', 'font-bold');
+      renderGrid();
+    }
+
+    function runScanSequence(id) {
+      const artifact = ARTIFACT_DB.find(a => a.id === id);
+      if (!artifact) return;
+      currentSelectedArtifact = artifact;
+      renderGrid();
+      playTone(320, 'square', 0.1, 0.08);
+
+      const curator = document.getElementById('curatorHandle').value || 'Explorer';
+      const standbyScreen = document.getElementById('standbyScreen');
+      const scanningScreen = document.getElementById('scanningScreen');
+      const activeSlot = document.getElementById('activeDossierSlot');
+      const targetBadge = document.getElementById('targetBadge');
+
+      targetBadge.classList.remove('hidden');
+      targetBadge.innerText = `LOCKED: ${artifact.name.toUpperCase()}`;
+      document.getElementById('chamberSection').scrollIntoView({ behavior: 'smooth' });
+
+      standbyScreen.classList.add('hidden');
+      activeSlot.classList.add('hidden');
+      scanningScreen.classList.remove('hidden');
+
+      document.getElementById('scanIconSlot').innerText = artifact.icon;
+      document.getElementById('scanTargetTitle').innerText = `ANALYZING [${artifact.name}]...`;
+
+      const bar = document.getElementById('scanProgressFill');
+      const sub = document.getElementById('scanTelemetryText');
+      const l1 = document.getElementById('scanLog1');
+      const l2 = document.getElementById('scanLog2');
+      const l3 = document.getElementById('scanLog3');
+
+      bar.style.width = '25%';
+      sub.innerText = 'Calculating atomic carbon polymer decay...';
+      l1.innerText = `> Specimen [${artifact.name}] isolated in stasis chamber.`;
+      l2.className = 'text-gray-500';
+      l3.className = 'text-gray-500';
+
+      playTachyonScanHum();
+
+      setTimeout(() => {
+        bar.style.width = '65%';
+        sub.innerText = 'Syncing with 2126 Temporal Archeology Lattice...';
+        l2.className = 'text-holoCyan';
+        l2.innerText = `> Classified: Authentic Earth Relic c.${artifact.year}. Class: ${artifact.categoryLabel}`;
+        playTone(560, 'sine', 0.1, 0.06);
+      }, 600);
+
+      setTimeout(() => {
+        bar.style.width = '90%';
+        sub.innerText = 'Connecting to Nano Banana Image Synthesizer...';
+        l3.className = 'text-holoPurple';
+        l3.innerText = `> Curated by: ${curator} | Holographic pod calibrated.`;
+        playTone(720, 'triangle', 0.12, 0.08);
+      }, 1200);
+
+      setTimeout(() => {
+        bar.style.width = '100%';
+        revealDossier(artifact, curator);
+      }, 1700);
+    }
+
+    function revealDossier(artifact, curator) {
+      playChimeSuccess();
+      const scanningScreen = document.getElementById('scanningScreen');
+      const activeSlot = document.getElementById('activeDossierSlot');
+      scanningScreen.classList.add('hidden');
+      activeSlot.classList.remove('hidden');
+
+      const exhibitNumber = Math.floor(100 + Math.random() * 900);
+      const exhibitTag = `EX-2126-${exhibitNumber}`;
+      const pitchScript = `Judges and festival visitors, look closely at this exhibit!
+
+In 2026, students carried this ${artifact.name} everywhere. But here in the Museum of 2126, our future archeologists cataloged it as:
+"${artifact.interpretation}"
+
+At our "Museum of 2126" college fest stall, you don't just observe products; you step into a time machine! Visitors place their everyday campus items into our live Temporal Scanner, generate an ultra-realistic AI holographic exhibit card powered by Google Gemini and Nano Banana, and walk away with an unforgettable campus memory in under 60 seconds.
+
+Step up, get archived, and let's see how the future remembers you!`;
+
+      activeSlot.innerHTML = `
+        <div class="holo-panel rounded-3xl p-6 sm:p-10 border border-holoCyan/40 relative overflow-hidden shadow-2xl">
+          <div class="absolute right-4 bottom-2 font-orbitron font-black text-8xl sm:text-9xl text-white/[0.02] select-none pointer-events-none">2126</div>
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-cyan-500/20 pb-6">
+            <div>
+              <div class="flex items-center gap-3">
+                <span class="px-2.5 py-1 rounded-md bg-holoPurple/20 text-purple-300 font-mono text-xs font-bold border border-holoPurple/40">${exhibitTag}</span>
+                <span class="text-xs font-mono text-emerald-400 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>RECONSTRUCTION AUTHENTICATED</span>
+              </div>
+              <h3 class="font-orbitron text-2xl sm:text-4xl font-extrabold text-white mt-2 flex items-center gap-3">
+                <span>${artifact.icon}</span> ${artifact.name.toUpperCase()}
+              </h3>
+              <p class="font-mono text-xs text-gray-400 mt-1">
+                ORIGIN: EARTH c.${artifact.year} • CURATOR: <span class="text-holoCyan font-bold">${curator}</span> • CLASS: ${artifact.categoryLabel}
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="exportArtifactDossier('${artifact.name}', '${exhibitTag}', '${curator}')" class="px-3.5 py-2 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-300 hover:border-holoCyan font-mono text-xs flex items-center gap-2 transition-all shadow-sm">
+                <span>💾</span> DOWNLOAD DOSSIER (.TXT)
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8">
+            <div class="lg:col-span-6 flex flex-col space-y-4">
+              <div class="font-mono text-xs text-gray-400 flex items-center justify-between">
+                <span class="flex items-center gap-2"><span class="text-holoCyan">●</span> NANO BANANA LIVE IMAGE VISUALIZER</span>
+                <span id="visualStatusTag" class="text-xs font-mono text-cyan-400">READY</span>
+              </div>
+              <div id="visualDisplayStage" class="relative w-full aspect-square rounded-2xl bg-gradient-to-b from-slate-950 to-voidDark border border-cyan-500/40 p-3 flex flex-col items-center justify-center overflow-hidden group">
+                <img id="aiImageRenderOutput" class="hidden absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-500 rounded-2xl" alt="Nano Banana Generated Image" />
+                <div class="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-holoCyan to-transparent pointer-events-none shadow-[0_0_15px_#00f0ff] z-20" style="animation: laserSweepAnim 2.4s infinite ease-in-out;"></div>
+                <div id="proceduralHoloHolder" class="relative z-0 w-full h-full flex items-center justify-center">
+                  ${renderBlueprintVector(artifact.blueprint)}
+                </div>
+                <div id="imageGenerationLoader" class="hidden absolute inset-0 bg-voidDark/90 backdrop-blur-md z-30 flex flex-col items-center justify-center space-y-3">
+                  <div class="w-12 h-12 rounded-full border-2 border-holoCyan border-t-transparent animate-spin"></div>
+                  <div class="font-orbitron text-xs text-holoCyan tracking-wider uppercase">GENERATING WITH NANO BANANA...</div>
+                  <div class="font-mono text-[11px] text-gray-400">Contacting gemini-3.1-flash-image endpoint</div>
+                </div>
+                <div class="absolute bottom-3 inset-x-4 flex justify-between font-mono text-[10px] text-cyan-400/80 z-20 pointer-events-none bg-black/40 backdrop-blur-sm px-2 py-1 rounded-lg">
+                  <span>SPECTRUM: 99.8%</span><span>PRESERVATION: TITANIUM-9</span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button id="liveGenerateBtn" onclick="callNanoBananaGeneration('${artifact.id}')" class="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-holoCyan via-sky-400 to-holoPurple text-black font-mono font-bold text-xs tracking-wider uppercase hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20">
+                  <span>⚡</span> GENERATE LIVE NANO BANANA ART
+                </button>
+                <button onclick="toggleModal('apiModal', true)" class="p-2.5 rounded-xl bg-slate-900 border border-purple-500/30 text-purple-300 hover:border-holoPurple font-mono text-xs" title="Configure Gemini API Key">🔑</button>
+              </div>
+
+              <div class="p-4 rounded-xl bg-cyan-950/30 border border-cyan-500/25 font-mono text-xs text-gray-300">
+                <span class="text-holoCyan font-bold">2126 Archeologist Field Log:</span><br>${artifact.archeologyNote}
+              </div>
+            </div>
+
+            <div class="lg:col-span-6 space-y-5">
+              <div class="p-5 rounded-2xl bg-voidDark/90 border border-gray-800 space-y-2">
+                <div class="font-mono text-xs text-holoPurple uppercase tracking-wider font-bold flex items-center gap-1.5"><span>📜</span> 2126 HISTORICAL DECONSTRUCTION</div>
+                <p class="text-sm sm:text-base text-gray-200 leading-relaxed italic">"${artifact.interpretation}"</p>
+              </div>
+
+              <div class="p-5 rounded-2xl bg-voidDark/90 border border-cyan-500/30 space-y-3">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                  <div class="font-mono text-xs text-holoCyan font-bold flex items-center gap-1.5"><span>⚡</span> NANO BANANA PROMPT (FOR LAB & GOOGLE AI STUDIO)</div>
+                  <button onclick="copyToClipboard('${artifact.nanoBananaPrompt.replace(/'/g, "\\'")}', 'Nano Banana Prompt copied!')" class="px-3 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-holoCyan border border-cyan-400/40 text-xs font-mono transition-all flex items-center gap-1"><span>📋</span> COPY PROMPT</button>
+                </div>
+                <div class="bg-black/70 rounded-xl p-3.5 font-mono text-xs text-cyan-300/90 leading-relaxed border border-cyan-500/20 max-h-32 overflow-y-auto">${artifact.nanoBananaPrompt}</div>
+                <p class="text-[11px] text-gray-400 font-mono">💡 Click <strong>Generate Live Nano Banana Art</strong> or paste this into Google AI Studio!</p>
+              </div>
+
+              <div class="p-5 rounded-2xl bg-voidDark/90 border border-purple-500/30 space-y-3">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                  <div class="font-mono text-xs text-purple-300 font-bold flex items-center gap-1.5"><span>⏱️</span> 60-SEC FEST PITCH SCRIPT FOR THIS SPECIMEN</div>
+                  <button onclick="copyToClipboard('${pitchScript.replace(/\n/g, '\\n').replace(/'/g, "\\'")}', 'Custom 60s pitch copied!')" class="px-3 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-400/40 text-xs font-mono transition-all flex items-center gap-1"><span>📋</span> COPY PITCH</button>
+                </div>
+                <div class="bg-black/70 rounded-xl p-3.5 font-sans text-xs sm:text-sm text-gray-300 leading-relaxed border border-purple-500/20 max-h-36 overflow-y-auto whitespace-pre-line">${pitchScript}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function callNanoBananaGeneration(artifactId) {
+      const artifact = ARTIFACT_DB.find(a => a.id === artifactId);
+      if (!artifact) return;
+      playTone(550, 'triangle', 0.1, 0.08);
+
+      const loader = document.getElementById('imageGenerationLoader');
+      const imgOutput = document.getElementById('aiImageRenderOutput');
+      const statusTag = document.getElementById('visualStatusTag');
+      const genBtn = document.getElementById('liveGenerateBtn');
+
+      loader.classList.remove('hidden');
+      genBtn.disabled = true;
+      genBtn.classList.add('opacity-50');
+      statusTag.innerText = 'GENERATING...';
+
+      const apiKey = storedApiKey || "";
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=${apiKey}`;
+
+      const payload = {
+        contents: [{ role: 'user', parts: [{ text: artifact.nanoBananaPrompt }] }],
+        generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: "1:1" } }
+      };
+
+      try {
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        const imgPart = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+
+        if (imgPart && imgPart.inlineData?.data) {
+          const imageUrl = `data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}`;
+          imgOutput.src = imageUrl;
+          imgOutput.classList.remove('hidden');
+          statusTag.innerText = 'LIVE NANO BANANA ACTIVE';
+          statusTag.className = 'text-xs font-mono text-emerald-400';
+          playChimeSuccess();
+          showToast('Nano Banana AI image synthesized!');
+        } else {
+          showToast('Displaying vector preview (Set API Key for live AI generation).');
+          statusTag.innerText = 'HOLOGRAPHIC VECTOR PREVIEW';
+          statusTag.className = 'text-xs font-mono text-holoCyan';
+        }
+      } catch (err) {
+        showToast('Displaying vector preview (Set API Key for live AI generation).');
+        statusTag.innerText = 'HOLOGRAPHIC VECTOR PREVIEW';
+      } finally {
+        loader.classList.add('hidden');
+        genBtn.disabled = false;
+        genBtn.classList.remove('opacity-50');
+      }
+    }
+
+    function renderBlueprintVector(type) {
+      switch(type) {
+        case 'phone':
+          return `<svg class="w-48 h-48 drop-shadow-[0_0_20px_rgba(0,240,255,0.5)]" viewBox="0 0 100 100" fill="none"><rect x="28" y="10" width="44" height="80" rx="6" stroke="#00f0ff" stroke-width="2"/><rect x="32" y="16" width="36" height="68" rx="3" stroke="#b026ff" stroke-width="1" fill="rgba(0,240,255,0.05)"/><circle cx="50" cy="13" r="1.5" fill="#00f0ff"/><rect x="36" y="24" width="10" height="10" rx="2" stroke="#00f0ff" stroke-width="0.8"/><rect x="54" y="24" width="10" height="10" rx="2" stroke="#ff007f" stroke-width="0.8"/><circle cx="63" cy="24" r="3" fill="#ff007f" class="animate-ping"/></svg>`;
+        case 'laptop':
+          return `<svg class="w-52 h-52 drop-shadow-[0_0_20px_rgba(0,240,255,0.5)]" viewBox="0 0 100 100" fill="none"><rect x="20" y="24" width="60" height="40" rx="3" stroke="#00f0ff" stroke-width="2"/><rect x="24" y="28" width="52" height="32" fill="rgba(176,38,255,0.08)" stroke="#b026ff" stroke-width="0.8"/><path d="M12 68 L88 68 L82 78 L18 78 Z" stroke="#00f0ff" stroke-width="2" fill="rgba(0,240,255,0.1)"/><rect x="42" y="70" width="16" height="5" rx="1" stroke="#b026ff" stroke-width="1"/></svg>`;
+        case 'headphones':
+          return `<svg class="w-48 h-48 drop-shadow-[0_0_20px_rgba(176,38,255,0.5)]" viewBox="0 0 100 100" fill="none"><path d="M25 55 C25 30, 75 30, 75 55" stroke="#00f0ff" stroke-width="3" stroke-linecap="round"/><rect x="18" y="50" width="14" height="24" rx="6" stroke="#b026ff" stroke-width="2" fill="rgba(0,240,255,0.1)"/><rect x="68" y="50" width="14" height="24" rx="6" stroke="#b026ff" stroke-width="2" fill="rgba(0,240,255,0.1)"/><circle cx="50" cy="40" r="2" fill="#00f0ff" class="animate-ping"/></svg>`;
+        case 'glasses':
+          return `<svg class="w-48 h-48 drop-shadow-[0_0_20px_rgba(176,38,255,0.5)]" viewBox="0 0 100 100" fill="none"><rect x="14" y="40" width="30" height="20" rx="4" stroke="#00f0ff" stroke-width="2" fill="rgba(0,240,255,0.05)"/><rect x="56" y="40" width="30" height="20" rx="4" stroke="#00f0ff" stroke-width="2" fill="rgba(0,240,255,0.05)"/><path d="M44 45 Q50 42 56 45" stroke="#b026ff" stroke-width="2"/><line x1="14" y1="44" x2="8" y2="42" stroke="#b026ff" stroke-width="2"/><line x1="86" y1="44" x2="92" y2="42" stroke="#b026ff" stroke-width="2"/></svg>`;
+        case 'backpack':
+          return `<svg class="w-48 h-48 drop-shadow-[0_0_20px_rgba(0,240,255,0.5)]" viewBox="0 0 100 100" fill="none"><rect x="25" y="25" width="50" height="55" rx="14" stroke="#00f0ff" stroke-width="2" fill="rgba(0,240,255,0.05)"/><rect x="32" y="50" width="36" height="24" rx="6" stroke="#b026ff" stroke-width="1.5"/><path d="M40 25 V18 C40 14, 60 14, 60 18 V25" stroke="#00f0ff" stroke-width="2"/></svg>`;
+        case 'flask':
+          return `<svg class="w-48 h-48 drop-shadow-[0_0_20px_rgba(0,240,255,0.5)]" viewBox="0 0 100 100" fill="none"><rect x="35" y="30" width="30" height="55" rx="6" stroke="#00f0ff" stroke-width="2" fill="rgba(0,240,255,0.05)"/><rect x="42" y="20" width="16" height="10" rx="2" stroke="#b026ff" stroke-width="1.5"/><line x1="35" y1="45" x2="65" y2="45" stroke="#b026ff" stroke-width="1"/></svg>`;
+        case 'camera':
+          return `<svg class="w-48 h-48 drop-shadow-[0_0_20px_rgba(244,63,94,0.5)]" viewBox="0 0 100 100" fill="none"><rect x="20" y="32" width="60" height="42" rx="6" stroke="#00f0ff" stroke-width="2" fill="rgba(244,63,94,0.08)"/><circle cx="50" cy="53" r="14" stroke="#b026ff" stroke-width="2"/><circle cx="50" cy="53" r="7" stroke="#00f0ff" stroke-width="1.2"/><rect x="30" y="24" width="16" height="8" rx="2" stroke="#00f0ff" stroke-width="1.5"/><circle cx="68" cy="40" r="2.5" fill="#ff007f"/></svg>`;
+        case 'controller':
+          return `<svg class="w-48 h-48 drop-shadow-[0_0_20px_rgba(176,38,255,0.5)]" viewBox="0 0 100 100" fill="none"><path d="M25 35 C38 32, 62 32, 75 35 C84 45, 86 68, 76 78 C70 82, 64 74, 58 64 C54 62, 46 62, 42 64 C36 74, 30 82, 24 78 C14 68, 16 45, 25 35 Z" stroke="#00f0ff" stroke-width="2" fill="rgba(176,38,255,0.1)"/><circle cx="35" cy="48" r="4" stroke="#b026ff" stroke-width="1.5"/><circle cx="65" cy="48" r="4" stroke="#b026ff" stroke-width="1.5"/><rect x="47" y="44" width="6" height="2" fill="#00f0ff"/></svg>`;
+        default:
+          return `<svg class="w-48 h-48 drop-shadow-[0_0_20px_rgba(0,240,255,0.5)]" viewBox="0 0 100 100" fill="none"><polygon points="50,15 85,32 85,68 50,85 15,68 15,32" stroke="#00f0ff" stroke-width="1.8" fill="rgba(0,240,255,0.06)"/><circle cx="50" cy="50" r="12" stroke="#b026ff" stroke-width="1.5" class="animate-pulse"/></svg>`;
+      }
+    }
+
+    function switchActiveTab(tabId) {
+      playTone(400, 'sine', 0.08, 0.05);
+      document.getElementById('scannerTab').classList.add('hidden');
+      document.getElementById('festSimulatorTab').classList.add('hidden');
+      document.getElementById(tabId).classList.remove('hidden');
+
+      ['scannerTab', 'festSimulatorTab'].forEach(t => {
+        const btn = document.getElementById(`tabNav-${t}`);
+        if (t === tabId) {
+          btn.classList.remove('border-transparent', 'text-gray-400');
+          btn.classList.add('border-holoCyan', 'text-holoCyan');
+        } else {
+          btn.classList.remove('border-holoCyan', 'text-holoCyan');
+          btn.classList.add('border-transparent', 'text-gray-400');
+        }
+      });
+    }
+
+    function copyToClipboard(text, notifyMsg) {
+      playTone(660, 'sine', 0.1, 0.08);
+      const temp = document.createElement('textarea');
+      temp.value = text;
+      temp.style.position = 'fixed';
+      temp.style.opacity = '0';
+      document.body.appendChild(temp);
+      temp.select();
+      try {
+        document.execCommand('copy');
+        showToast(notifyMsg);
+      } catch (err) {
+        showToast('Text copied!');
+      }
+      document.body.removeChild(temp);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toastNotification');
+      const text = document.getElementById('toastMsgText');
+      text.innerText = msg;
+      toast.classList.remove('translate-y-24', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-24', 'opacity-0');
+      }, 2500);
+    }
+
+    function exportArtifactDossier(name, exhibitId, curator) {
+      const artifact = ARTIFACT_DB.find(a => a.name === name);
+      if (!artifact) return;
+      playTone(880, 'sine', 0.15, 0.1);
+
+      const report = `==========================================================\n        MUSEUM OF 2126 • TEMPORAL ARTIFACT DOSSIER\n==========================================================\nSPECIMEN ID   : ${exhibitId}\nSPECIMEN NAME : ${artifact.name.toUpperCase()} (Year: c.${artifact.year} CE)\nCATEGORY      : ${artifact.categoryLabel}\nLEAD CURATOR  : ${curator}\nSTATUS        : CLASSIFIED ARCHEOLOGICAL ARTIFACT\n\n----------------------------------------------------------\n2126 ARCHEOLOGICAL DECONSTRUCTION:\n----------------------------------------------------------\n"${artifact.interpretation}"\n\nARCHEOLOGIST FIELD NOTE:\n${artifact.archeologyNote}\n\n----------------------------------------------------------\nNANO BANANA GENERATIVE PROMPT (FOR GOOGLE AI STUDIO):\n----------------------------------------------------------\n${artifact.nanoBananaPrompt}\n\n----------------------------------------------------------\n60-SECOND FESTIVAL PITCH SCRIPT:\n----------------------------------------------------------\n"Judges and festival visitors, look closely at this exhibit!\nIn 2026, students carried this ${artifact.name} everywhere. But in 2126,\nour future archeologists cataloged it as: '${artifact.interpretation}'\n\nAt our Museum of 2126 fest stall, visitors don't just shop; they time-travel!\nStep into our live temporal scanner, scan your everyday gear, generate\na viral AI holographic card powered by Google Gemini and Nano Banana,\nand walk away with an unforgettable memory in under 60 seconds.\nGet archived today!"\n\n==========================================================\nGOOGLE STUDENT AMBASSADOR PRODUCT TRIAL • FEST 2026\n==========================================================`;
+
+      const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Museum_2126_${exhibitId}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast(`Dossier ${exhibitId} exported!`);
+    }
+
+    function copyMasterPitchScript() {
+      const text = document.getElementById('masterPitchBox').innerText;
+      copyToClipboard(text, "Master 60s pitch script copied!");
+    }
+
+    let timerTotal = 60;
+    let timerTicker = null;
+
+    function toggleTimer() {
+      initAudioEngine();
+      const btn = document.getElementById('pitchTimerBtn');
+      if (timerTicker) {
+        clearInterval(timerTicker);
+        timerTicker = null;
+        btn.innerText = 'RESUME';
+        btn.className = 'px-4 py-1.5 rounded-lg bg-amber-400 text-black font-mono text-xs font-bold transition-all';
+        playTone(350, 'sine', 0.1, 0.08);
+      } else {
+        playTone(550, 'sine', 0.1, 0.08);
+        btn.innerText = 'PAUSE';
+        btn.className = 'px-4 py-1.5 rounded-lg bg-holoPink text-white font-mono text-xs font-bold transition-all';
+        timerTicker = setInterval(() => {
+          timerTotal--;
+          renderTimerDisplay();
+          if (timerTotal <= 5 && timerTotal > 0) playTone(880, 'sine', 0.05, 0.05);
+          if (timerTotal <= 0) {
+            clearInterval(timerTicker);
+            timerTicker = null;
+            playChimeSuccess();
+            showToast("Time's Up! 60-Second Pitch Finished!");
+            btn.innerText = 'START';
+            btn.className = 'px-4 py-1.5 rounded-lg bg-holoCyan text-black font-mono text-xs font-bold transition-all';
+          }
+        }, 1000);
+      }
+    }
+
+    function resetTimer() {
+      if (timerTicker) { clearInterval(timerTicker); timerTicker = null; }
+      timerTotal = 60;
+      renderTimerDisplay();
+      const btn = document.getElementById('pitchTimerBtn');
+      btn.innerText = 'START';
+      btn.className = 'px-4 py-1.5 rounded-lg bg-holoCyan text-black font-mono text-xs font-bold transition-all';
+      playTone(400, 'sine', 0.08, 0.05);
+    }
+
+    function renderTimerDisplay() {
+      const display = document.getElementById('pitchTimerText');
+      const mins = Math.floor(timerTotal / 60);
+      const secs = timerTotal % 60;
+      display.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      display.className = timerTotal <= 10 ? 'font-orbitron font-black text-3xl text-holoPink animate-pulse' : 'font-orbitron font-black text-3xl text-holoCyan glow-cyan';
+    }
+
+    function toggleModal(modalId, open) {
+      playTone(open ? 450 : 350, 'sine', 0.08, 0.05);
+      const modal = document.getElementById(modalId);
+      if (open) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+      else { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+    }
+
+    function saveApiKey() {
+      const input = document.getElementById('customApiKeyInput').value.trim();
+      storedApiKey = input;
+      const statusText = document.getElementById('keyBadgeText');
+      if (storedApiKey) {
+        statusText.innerText = 'KEY SET ✓';
+        showToast('Gemini API Key configured!');
+      } else {
+        statusText.innerText = 'API KEY';
+        showToast('Procedural vector mode active');
+      }
+      toggleModal('apiModal', false);
+      playTone(600, 'sine', 0.1, 0.08);
+    }
+
+    function setupStarfield() {
+      const canvas = document.getElementById('ambientStarfield');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      let w = (canvas.width = window.innerWidth);
+      let h = (canvas.height = window.innerHeight);
+
+      window.addEventListener('resize', () => {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+      });
+
+      const particles = [];
+      for (let i = 0; i < 60; i++) {
+        particles.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          r: Math.random() * 1.5 + 0.4,
+          color: Math.random() > 0.5 ? '#00f0ff' : '#b026ff',
+          vx: (Math.random() - 0.5) * 0.25,
+          vy: (Math.random() - 0.5) * 0.25,
+        });
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, w, h);
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          p.x += p.vx; p.y += p.vy;
+          if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
+          if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.fill();
+        }
+        requestAnimationFrame(draw);
+      }
+      draw();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderGrid();
+      setupStarfield();
+      setTimeout(() => runScanSequence('art-smartphone'), 400);
+    });
+  </script>
+</body>
+</html>
